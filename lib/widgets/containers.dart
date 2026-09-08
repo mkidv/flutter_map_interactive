@@ -2,7 +2,6 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_interactive/flutter_map_interactive.dart';
-import 'package:flutter_map_interactive/utils/matrix.dart';
 import 'package:latlong2/latlong.dart';
 
 class FlutterMapContainer extends StatefulWidget {

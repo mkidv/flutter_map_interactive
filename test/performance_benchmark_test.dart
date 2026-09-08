@@ -2,8 +2,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_map_interactive/flutter_map_interactive.dart';
-import 'package:flutter_map_interactive/overlays/layers/overlay_handle_layer.dart';
-import 'package:flutter_map_interactive/polylines/layers/polyline_handle_layer.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
 

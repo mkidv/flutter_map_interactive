@@ -25,8 +25,8 @@ class MarkerTransientLayer extends StatelessWidget {
           point: state.current,
         );
 
-        // We use MarkerLayer to render it to ensure consistent styling/alignment
-        return MarkerLayer(
+        // We use InteractiveMarkerItemLayer to render it to ensure consistent styling/alignment
+        return InteractiveMarkerItemLayer(
           markers: [draggedMarker],
           options: options,
         );

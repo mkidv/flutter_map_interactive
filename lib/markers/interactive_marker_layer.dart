@@ -171,7 +171,7 @@ class _InteractiveMarkerLayerState
               markers: displayMarkers,
               options: widget.labelOptions!,
             ),
-          MarkerLayer(
+          InteractiveMarkerItemLayer(
             markers: displayMarkers,
             options: widget.markerOptions,
           ),

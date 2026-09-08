@@ -7,10 +7,12 @@ import 'package:latlong2/latlong.dart';
 Widget wrapMap({
   required List<Widget> children,
   MapOptions? options,
+  MapController? mapController,
 }) {
   return MaterialApp(
     home: Scaffold(
       body: FlutterMap(
+        mapController: mapController,
         options: options ??
             const MapOptions(
               initialCenter: LatLng(0, 0),

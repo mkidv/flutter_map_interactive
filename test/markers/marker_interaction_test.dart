@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart' hide MarkerLayer;
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_interactive/flutter_map_interactive.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
@@ -34,8 +34,8 @@ void main() {
           const InteractiveMarkerLayer(markers: []),
         ],
       ));
-      expect(find.byType(MarkerLayer),
-          findsOneWidget); // MarkerLayer is always present? Or empty?
+      expect(find.byType(InteractiveMarkerItemLayer),
+          findsOneWidget); // InteractiveMarkerItemLayer is always present? Or empty?
 
       await tester.pumpWidget(wrapMap(
         children: [

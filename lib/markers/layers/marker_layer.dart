@@ -7,8 +7,8 @@ import 'package:flutter_map_interactive/reactive/selector.dart';
 import 'package:flutter_map_interactive/utils/flutter_map.dart';
 import 'package:flutter_map_interactive/widgets/containers.dart';
 
-class MarkerLayer extends StatelessWidget {
-  const MarkerLayer({
+class InteractiveMarkerItemLayer extends StatelessWidget {
+  const InteractiveMarkerItemLayer({
     super.key,
     required this.markers,
     required this.options,
