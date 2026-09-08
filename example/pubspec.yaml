@@ -1,0 +1,26 @@
+name: flutter_map_interactive_example
+description: "FlutterMap Interactive Example"
+version: 0.1.0
+publish_to: none
+
+environment:
+  flutter: ">=3.2.0"
+  sdk: ">=3.6.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_lints: ^2.0.0
+  flutter_map: ^8.3.2
+  flutter_map_interactive:
+  latlong2: ^0.9.1
+  web: ^1.1.1
+
+dependency_overrides:
+  flutter_map_interactive:
+    path: ../
+
+flutter :
+  uses-material-design: true
+  assets:
+    - assets/
