@@ -424,7 +424,8 @@ class _DemoPageState extends State<DemoPage> with TickerProviderStateMixin {
                       children: [
                         ActionChip(
                           label: const Text('Map only'),
-                          onPressed: () => _applyPanProfile(_PanProfile.mapOnly),
+                          onPressed: () =>
+                              _applyPanProfile(_PanProfile.mapOnly),
                         ),
                         ActionChip(
                           label: const Text('Markers'),

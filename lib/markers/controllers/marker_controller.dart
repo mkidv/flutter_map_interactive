@@ -94,7 +94,8 @@ class MarkerController extends InteractiveController<Marker> {
         for (final marker in markers)
           if (marker.key case final key?)
             switch (currentByKey[key]) {
-              final Marker currentMarker? => _mergeMarker(currentMarker, marker),
+              final Marker currentMarker? =>
+                _mergeMarker(currentMarker, marker),
               _ => marker,
             }
           else

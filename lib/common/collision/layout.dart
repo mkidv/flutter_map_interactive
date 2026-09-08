@@ -93,13 +93,16 @@ class CollisionNode<T> {
 /// Stores the placement (offset and center) of a collision node after layout.
 class CollisionPlacement {
   // new center
-  const CollisionPlacement(
-      {required this.key, required this.offsetPx, required this.centerPx, this.showConnector = true,});
+  const CollisionPlacement({
+    required this.key,
+    required this.offsetPx,
+    required this.centerPx,
+    this.showConnector = true,
+  });
   final Key key;
   final Offset offsetPx; // offset on origin
   final Offset centerPx;
-    final bool showConnector;
-
+  final bool showConnector;
 }
 
 /// Main widget for managing collision-aware placement.

@@ -97,7 +97,8 @@ class InteractiveEnabledGestures {
       );
 
   /// All gestures enabled.
-  factory InteractiveEnabledGestures.all() => const InteractiveEnabledGestures();
+  factory InteractiveEnabledGestures.all() =>
+      const InteractiveEnabledGestures();
 
   /// Whether tap gesture is enabled.
   final bool tap;

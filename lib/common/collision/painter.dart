@@ -95,7 +95,8 @@ class ConnectorPainter extends CustomPainter {
 
       final start = anchorPx;
 
-      final end = _edgeAlongRay(labelRect, labelRect.center, anchorPx, gap: endGapPx);
+      final end =
+          _edgeAlongRay(labelRect, labelRect.center, anchorPx, gap: endGapPx);
       if (end == null) continue;
 
       final distance = (end - start).distance;
@@ -120,8 +121,10 @@ class ConnectorPainter extends CustomPainter {
     final tangent = distance > 1e-6 ? vector / distance : const Offset(1, 0);
     final normal = Offset(-tangent.dy, tangent.dx);
 
-    final cp1 = start + tangent * (distance * 0.14) + normal * (bendFactor * 0.5);
-    final cp2 = end - tangent * (distance * 0.16) + normal * (bendFactor * 0.16);
+    final cp1 =
+        start + tangent * (distance * 0.14) + normal * (bendFactor * 0.5);
+    final cp2 =
+        end - tangent * (distance * 0.16) + normal * (bendFactor * 0.16);
     path.cubicTo(cp1.dx, cp1.dy, cp2.dx, cp2.dy, end.dx, end.dy);
     return path;
   }

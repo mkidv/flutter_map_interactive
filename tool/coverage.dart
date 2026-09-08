@@ -7,43 +7,22 @@ Future<void> main(List<String> args) async {
   final reportOnly = args.contains('--report-only');
 
   if (!reportOnly) {
-    print('Running tests with coverage...');
+    print('Running Flutter tests with coverage...');
     final coverageDir = Directory('coverage');
     if (coverageDir.existsSync()) {
       coverageDir.deleteSync(recursive: true);
     }
-    coverageDir.createSync();
 
     final testResult = await Process.run(
-      'dart',
-      ['test', '--coverage=coverage', 'test/'],
+      'flutter',
+      ['test', '--coverage'],
+      runInShell: true,
     );
 
     if (testResult.exitCode != 0) {
       print(testResult.stdout);
       print(testResult.stderr);
       exit(testResult.exitCode);
-    }
-
-    print('Formatting coverage to lcov...');
-    final formatResult = await Process.run(
-      'dart',
-      [
-        'pub',
-        'global',
-        'run',
-        'coverage:format_coverage',
-        '--lcov',
-        '--in=coverage/test',
-        '--out=coverage/lcov.info',
-        '--report-on=lib'
-      ],
-    );
-
-    if (formatResult.exitCode != 0) {
-      print('Error formatting coverage. Ensure coverage package is activated:');
-      print('dart pub global activate coverage');
-      exit(formatResult.exitCode);
     }
   }
 

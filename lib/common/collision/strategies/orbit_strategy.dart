@@ -81,9 +81,8 @@ class OrbitStrategy implements CollisionStrategy {
       required int mask,
       bool hysteresis = false,
     }) {
-      final pad = hysteresis
-          ? math.max(0.0, options.pad - hysteresisPx)
-          : options.pad;
+      final pad =
+          hysteresis ? math.max(0.0, options.pad - hysteresisPx) : options.pad;
 
       final l = rect.left - pad;
       final t = rect.top - pad;
@@ -292,12 +291,14 @@ class OrbitStrategy implements CollisionStrategy {
         }
       }
 
-      final chosenOffset = bestOffset ?? softOffset ?? (() {
-        final ref = prev.distanceSquared > 1e-9 ? prev : outward;
-        final d = ref.distance;
-        if (d <= 1e-9) return Offset(baseRadius, 0);
-        return ref / d * baseRadius;
-      })();
+      final chosenOffset = bestOffset ??
+          softOffset ??
+          (() {
+            final ref = prev.distanceSquared > 1e-9 ? prev : outward;
+            final d = ref.distance;
+            if (d <= 1e-9) return Offset(baseRadius, 0);
+            return ref / d * baseRadius;
+          })();
 
       final rect = bestRect ?? softRect ?? base.shift(chosenOffset);
 

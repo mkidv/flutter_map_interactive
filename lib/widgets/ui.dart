@@ -28,7 +28,8 @@ class MapControlButton extends StatelessWidget {
         onTap: onPressed,
         child: ConstrainedBox(
           constraints: const BoxConstraints(
-              minWidth: _kInteractiveToolbarButtonSize, minHeight: _kInteractiveToolbarButtonSize),
+              minWidth: _kInteractiveToolbarButtonSize,
+              minHeight: _kInteractiveToolbarButtonSize),
           child: Padding(
             padding: const EdgeInsets.all(8),
             child: Icon(icon, size: _kInteractiveToolbarIconSize),
@@ -69,10 +70,10 @@ class EditModeUndoButton extends StatelessWidget {
         listenable: controller,
         select: (e) => e.canUndo,
         builder: (context, canUndo) => MapControlButton(
-            tooltip: 'Undo',
-            onPressed: canUndo ? controller.undo : null,
-            icon: Icons.undo,
-          ));
+              tooltip: 'Undo',
+              onPressed: canUndo ? controller.undo : null,
+              icon: Icons.undo,
+            ));
   }
 }
 
@@ -86,10 +87,10 @@ class EditModeRedoButton extends StatelessWidget {
         listenable: controller,
         select: (e) => e.canRedo,
         builder: (context, canRedo) => MapControlButton(
-            tooltip: 'Redo',
-            onPressed: canRedo ? controller.redo : null,
-            icon: Icons.redo,
-          ));
+              tooltip: 'Redo',
+              onPressed: canRedo ? controller.redo : null,
+              icon: Icons.redo,
+            ));
   }
 }
 
@@ -102,7 +103,7 @@ class MapCenterButton extends StatelessWidget {
     required this.zoom,
     required this.tooltip,
   });
-  
+
   final MapController map;
   final TickerProvider vsync;
   final LatLng center;
@@ -123,4 +124,3 @@ class MapCenterButton extends StatelessWidget {
     );
   }
 }
-

@@ -161,7 +161,6 @@ class _HitTestableGestureDetectorState<T extends Object>
       );
     }
 
-
     final raw = RawGestureDetector(
       gestures: gestures,
       behavior: widget.behavior ?? HitTestBehavior.translucent,

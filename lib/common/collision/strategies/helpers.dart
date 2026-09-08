@@ -216,7 +216,8 @@ List<Offset> candidateAlignmentOffsets({
       margin: margin,
     );
     final offset = rect.topLeft - base.topLeft;
-    final exists = offsets.any((value) => (value - offset).distanceSquared < 0.5);
+    final exists =
+        offsets.any((value) => (value - offset).distanceSquared < 0.5);
     if (!exists) offsets.add(offset);
   }
 
@@ -305,7 +306,12 @@ bool segmentIntersectsRect(Offset a, Offset b, Rect rect) {
 
 double segmentDistanceToRect(Offset a, Offset b, Rect rect) {
   if (segmentIntersectsRect(a, b, rect)) return 0.0;
-  final corners = [rect.topLeft, rect.topRight, rect.bottomLeft, rect.bottomRight];
+  final corners = [
+    rect.topLeft,
+    rect.topRight,
+    rect.bottomLeft,
+    rect.bottomRight
+  ];
   var best = double.infinity;
   for (final corner in corners) {
     final d = _distancePointToSegment(corner, a, b);
@@ -364,14 +370,12 @@ double placementScore({
   final preferredNorm = preferredDir.distance > 1e-6
       ? preferredDir / preferredDir.distance
       : const Offset(1, 0);
-  final candidateNorm = candidate.distance > 1e-6
-      ? candidate / candidate.distance
-      : Offset.zero;
-  final directionPenalty =
-      (1 -
-              (candidateNorm.dx * preferredNorm.dx +
-                  candidateNorm.dy * preferredNorm.dy)) *
-          directionWeight;
+  final candidateNorm =
+      candidate.distance > 1e-6 ? candidate / candidate.distance : Offset.zero;
+  final directionPenalty = (1 -
+          (candidateNorm.dx * preferredNorm.dx +
+              candidateNorm.dy * preferredNorm.dy)) *
+      directionWeight;
 
   final clearancePenalty = switch (candidateRect) {
     final Rect rect when slots.isNotEmpty =>

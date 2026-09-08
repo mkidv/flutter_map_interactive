@@ -31,7 +31,8 @@ class InteractiveMarkerLayer extends StatefulWidget {
     required this.markers,
     this.markerController,
     this.options = const InteractiveOptions(),
-    this.markerOptions = const MarkerLayerOptions(alignment: Alignment.bottomCenter),
+    this.markerOptions =
+        const MarkerLayerOptions(alignment: Alignment.bottomCenter),
     this.popupOptions,
     this.labelOptions,
     this.actionOptions,
@@ -123,7 +124,8 @@ class _InteractiveMarkerLayerState
   void didUpdateWidget(covariant InteractiveMarkerLayer oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    final controllerChanged = oldWidget.markerController != widget.markerController;
+    final controllerChanged =
+        oldWidget.markerController != widget.markerController;
 
     if (controllerChanged) {
       disposeControllersIfNeeded();
@@ -133,7 +135,8 @@ class _InteractiveMarkerLayerState
 
       // Check for content equality to avoid spurious updates
       final markersChanged = !identical(oldWidget.markers, widget.markers) &&
-          !const DeepCollectionEquality().equals(oldWidget.markers, widget.markers);
+          !const DeepCollectionEquality()
+              .equals(oldWidget.markers, widget.markers);
 
       if (markersChanged) {
         _scheduleMarkerSync(widget.markers);
@@ -146,11 +149,14 @@ class _InteractiveMarkerLayerState
     return InteractiveMarkerScope(
       controller: controller,
       builder: (context, markers) {
-        final visibleMarkers =
-            markers.where((marker) => !InteractiveMarker.fromMarker(marker).isHidden).toList();
+        final visibleMarkers = markers
+            .where((marker) => !InteractiveMarker.fromMarker(marker).isHidden)
+            .toList();
         final displayMarkers = controller.transientKeys.isEmpty
             ? visibleMarkers
-            : visibleMarkers.where((m) => !controller.transientKeys.contains(m.key)).toList();
+            : visibleMarkers
+                .where((m) => !controller.transientKeys.contains(m.key))
+                .toList();
 
         return Stack(children: [
           if (widget.debug) ...[

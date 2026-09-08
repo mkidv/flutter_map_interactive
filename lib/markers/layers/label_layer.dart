@@ -35,8 +35,8 @@ class LabelLayer extends StatelessWidget {
       options: options.collision,
       buildNodes: (ctx, cam) {
         return markers
-            .where(
-                (m) => m.inMapBounds(cam, options: options, active: controller.isActiveKey(m.key)))
+            .where((m) => m.inMapBounds(cam,
+                options: options, active: controller.isActiveKey(m.key)))
             .map((m) {
           final em = InteractiveMarker.fromMarker(m);
 
@@ -46,7 +46,8 @@ class LabelLayer extends StatelessWidget {
                   ? 1
                   : 10;
 
-          final anchorRect = em.pixelBounds(cam, active: controller.isActiveKey(em.key));
+          final anchorRect =
+              em.pixelBounds(cam, active: controller.isActiveKey(em.key));
 
           Widget buildLabel(BuildContext c) =>
               em.labelOptions?.label ??
@@ -69,7 +70,8 @@ class LabelLayer extends StatelessWidget {
         }).toList();
       },
       builder: (ctx, cam, node, place) {
-        final labelChild = node.measureBuilder?.call(ctx) ?? const SizedBox.shrink();
+        final labelChild =
+            node.measureBuilder?.call(ctx) ?? const SizedBox.shrink();
 
         return ListenableSelector(
             listenable: controller,
