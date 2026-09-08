@@ -19,7 +19,7 @@
 # flutter_map_interactive
 
 Interactive editing, collision avoidance, and state management for [flutter_map](https://pub.dev/packages/flutter_map).
-A complete GIS interaction toolkit providing rich manipulation primitives: **Markers, Polylines, Image Overlays, Undo/Redo, and Collision Detection**.
+Composable interaction layers for flutter_map: **Markers, Polylines, Image Overlays, Undo/Redo, and Collision Detection**.
 
 <p align="center">
   <b>Tested</b> · <code>226/226 tests passing</code> · <code>flutter_map ^8.3.2</code>
