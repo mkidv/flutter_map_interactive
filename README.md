@@ -47,8 +47,8 @@ Or add to your `pubspec.yaml`:
 ```yaml
 dependencies:
   flutter_map: ^8.3.2
-  flutter_map_interactive: ^0.1.0
-  latlong2: ^0.9.1
+  flutter_map_interactive: ^0.1.1
+  latlong2: ^0.10.1
 ```
 
 ## 🧭 API & Architecture

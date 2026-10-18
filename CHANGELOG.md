@@ -1,3 +1,9 @@
+## 0.1.1
+
+* Update `latlong2` to `^0.10.1` and `meta` to `^1.19.0`.
+* Update the example and installation instructions to use the new dependency versions.
+* Exclude generated build and platform directories from example analysis.
+
 ## 0.1.0
 
 * Initial release of `flutter_map_interactive`.
