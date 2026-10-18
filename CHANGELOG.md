@@ -1,4 +1,6 @@
-## Unreleased
+## 0.2.0
+
+This release focuses on the interactive example and documentation. The public package API is unchanged.
 
 * Rebuild the interactive example around marker, polyline, and image overlay scenes with adaptive desktop and mobile controls.
 * Preserve scene edits and history across scene switches, settings changes, and layout changes.

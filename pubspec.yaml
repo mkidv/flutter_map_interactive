@@ -1,6 +1,6 @@
 name: flutter_map_interactive
 description: "A powerful Flutter Map plugin adding collision detection, interactive editing (drag, rotate, resize, undo/redo), and state management for markers, polylines, and image overlays."
-version: 0.1.1
+version: 0.2.0
 homepage: https://github.com/mkidv/flutter_map_interactive
 repository: https://github.com/mkidv/flutter_map_interactive
 issue_tracker: https://github.com/mkidv/flutter_map_interactive/issues

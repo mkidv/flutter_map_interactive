@@ -32,6 +32,8 @@ Composable interaction layers for flutter_map: **Markers, Polylines, Image Overl
 
 The demo adapts to desktop and mobile screens. Changes stay in the current browser tab and reset on reload.
 
+Version **0.2.0** introduces the guided playground and automated demo deployment. The public package API is unchanged from 0.1.1.
+
 <p align="center">
   <b>Tested</b> · <code>255/255 tests passing</code> · <code>flutter_map ^8.3.2</code>
 </p>
@@ -58,7 +60,7 @@ Or add to your `pubspec.yaml`:
 ```yaml
 dependencies:
   flutter_map: ^8.3.2
-  flutter_map_interactive: ^0.1.1
+  flutter_map_interactive: ^0.2.0
   latlong2: ^0.10.1
 ```
 
