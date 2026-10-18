@@ -21,6 +21,17 @@
 Interactive editing, collision avoidance, and state management for [flutter_map](https://pub.dev/packages/flutter_map).
 Composable interaction layers for flutter_map: **Markers, Polylines, Image Overlays, Undo/Redo, and Collision Detection**.
 
+## Live interactive demo
+
+**[Try the demo in your browser](https://mkidv.github.io/flutter_map_interactive/)** · [Example source](example/lib/pages/demo_page.dart)
+
+- **Pins:** compare five label placement strategies on a dense dataset; toggle collision avoidance and connector lines.
+- **Lines:** enable edit mode, select a route, and drag its vertices or the entire line.
+- **Images:** align a floor plan using corner, edge, and rotation handles.
+- **History:** add or delete items, undo/redo, save an in-memory checkpoint, and discard changes. Switching scenes preserves your work.
+
+The demo adapts to desktop and mobile screens. Changes stay in the current browser tab and reset on reload.
+
 <p align="center">
   <b>Tested</b> · <code>255/255 tests passing</code> · <code>flutter_map ^8.3.2</code>
 </p>

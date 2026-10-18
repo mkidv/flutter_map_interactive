@@ -1,531 +1,470 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_interactive/flutter_map_interactive.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../data/example_data.dart';
 import '../widgets/control_panel.dart';
-import '../widgets/layer_settings.dart';
 
-enum _PanProfile { mapOnly, markersOnly, labels, full }
+enum DemoScene { markers, polylines, overlays }
 
 class DemoPage extends StatefulWidget {
-  const DemoPage({super.key});
+  const DemoPage({super.key, this.tileProvider});
+
+  /// Allows widget tests to exercise the demo without requesting map tiles.
+  final TileProvider? tileProvider;
+
   @override
   State<DemoPage> createState() => _DemoPageState();
 }
 
-class _DemoPageState extends State<DemoPage> with TickerProviderStateMixin {
-  final MapController _map = MapController();
+class _DemoPageState extends State<DemoPage> {
+  final _map = MapController();
+  final _mapKey = GlobalKey();
+  final _markers = MarkerController();
+  final _polylines = PolylineController();
+  final _overlays = OverlayController();
+  final _subscriptions = <StreamSubscription<InteractiveEvent<Object>>>[];
+  late final List<Marker> _initialMarkers;
+  late final List<InteractivePolyline> _initialPolylines;
+  late final List<InteractiveOverlayImage> _initialOverlays;
+  final _activity =
+      ValueNotifier<String>('Choose a scene, then select an item.');
+  DemoScene _scene = DemoScene.markers;
+  bool _avoidCollisions = true;
+  bool _connectors = true;
+  bool _debug = false;
+  bool _dense = true;
+  bool _labels = true;
+  bool _ready = false;
+  double _opacity = 0.65;
+  int _strategy = 0;
+  int _nextId = 0;
 
-  late final MarkerController _inter;
-  late final OverlayController _interOverlay;
-  late final PolylineController _interPolyline;
+  static const _strategies = <String, CollisionStrategy>{
+    'Sticky golden fan': StickyGoldenFanStrategy(),
+    'Orbit': OrbitStrategy(),
+    'Spiral': SnapBackSpiralStrategy(),
+    'Radial fan': RadialFanStrategy(),
+    'Nearest': StickyNearestStrategy(),
+  };
 
-  // Settings state
-  bool _debugHitbox = false;
-  bool _collisionAvoidance = false;
-  double _overlayAlpha = 0.8;
-  bool _showSettings = false;
-  bool _showMarkersLayer = true;
-  bool _showMarkerLabels = true;
-  bool _showMarkerConnectors = true;
-  bool _showPolylineLayer = true;
-  bool _showOverlayLayer = true;
-  bool _denseMarkers = false;
-
-  // Gestures
-  bool _gTap = true, _gMoveOnTap = false;
-  final bool _gLong = true;
-  final bool _gDrag = true;
-
-  final _markers = <Marker>[];
-  final _polylines = <InteractivePolyline>[];
+  InteractiveController<Object> get _controller => switch (_scene) {
+        DemoScene.markers => _markers,
+        DemoScene.polylines => _polylines,
+        DemoScene.overlays => _overlays,
+      };
 
   @override
   void initState() {
     super.initState();
-
-    _inter = MarkerController();
-    _interOverlay = OverlayController();
-    _interPolyline = PolylineController();
-
-    _rebuildMarkers();
-    _polylines.addAll(ExampleData.initialPolylines);
+    _initialMarkers = _markerData(dense: true);
+    _initialPolylines = ExampleData.initialPolylines;
+    _initialOverlays = [_overlay('floor-plan', ExampleData.latLngStart)];
+    // Layers initialise during map layout. Attach sibling toolbar listeners
+    // after their initial notifications, once the first frame is complete.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _ready = true);
+    });
+    for (final controller in <InteractiveController<Object>>[
+      _markers,
+      _polylines,
+      _overlays,
+    ]) {
+      _subscriptions.add(controller.events.listen((event) {
+        // Drag frames can arrive at pointer frequency; keep the log inexpensive.
+        if (event is DragUpdated ||
+            event is HistoryChanged ||
+            event is ItemHovered ||
+            event is HoverCleared) {
+          return;
+        }
+        _activity.value = switch (event) {
+          ItemAdded() => 'Item added. Try Undo to remove it again.',
+          ItemRemoved() => 'Item deleted. Undo restores it.',
+          ItemUpdated() => 'Item updated.',
+          ItemSelected() => 'Item selected. Enable editing to change it.',
+          ItemDeselected() => 'Selection cleared.',
+          DragStarted() => 'Dragging…',
+          DragEnded() => 'Drag complete. Try Undo to restore its position.',
+          EditModeChanged() => 'Edit mode changed.',
+          _ => 'Selection updated.',
+        };
+      }));
+    }
   }
 
   @override
   void dispose() {
-    _inter.dispose();
-    _interOverlay.dispose();
-    _interPolyline.dispose();
+    for (final subscription in _subscriptions) {
+      subscription.cancel();
+    }
+    _markers.dispose();
+    _polylines.dispose();
+    _overlays.dispose();
+    _map.dispose();
+    _activity.dispose();
     super.dispose();
   }
 
-  InteractiveMarker _mk(String id, LatLng p) => InteractiveMarker(
-          key: ValueKey(id),
-          point: p,
-          width: 30,
-          height: 30,
-          rotate: true,
-          alignment: Alignment.center,
-          child: Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black26,
-                  blurRadius: 4,
-                  offset: Offset(0, 2),
-                ),
-              ],
-            ),
-            padding: const EdgeInsets.all(4),
-            child:
-                const Icon(Icons.location_on, size: 20, color: Colors.indigo),
-          ),
-          options: [
-            LabelMarkerOptions(
-              label: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.indigo.withAlpha(200),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  id.substring(id.length > 4 ? id.length - 4 : 0),
-                  style: const TextStyle(color: Colors.white, fontSize: 10),
-                ),
+  List<Marker> _markerData({required bool dense}) => (dense
+          ? ExampleData.denseMarkerLocations(
+              rows: 4, cols: 4, latStep: 0.00018, lngStep: 0.00024)
+          : ExampleData.markerLocations)
+      .map((entry) => _marker(entry.id, entry.point))
+      .toList();
+
+  InteractiveMarker _marker(String id, LatLng point) => InteractiveMarker(
+        key: ValueKey(id),
+        point: point,
+        width: 28,
+        height: 28,
+        child: const Icon(Icons.location_on, color: Colors.indigo, size: 28),
+        options: [
+          LabelMarkerOptions(
+            label: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.indigo,
+                borderRadius: BorderRadius.circular(6),
               ),
-              rotate: true,
+              child: Text(id, style: const TextStyle(color: Colors.white)),
             ),
-          ]);
+          ),
+          PopupMarkerOptions(
+            popup: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Text('Marker $id\nEnable editing to drag this pin.'),
+              ),
+            ),
+          ),
+        ],
+      );
 
-  void _rebuildMarkers() {
-    final source = _denseMarkers
-        ? ExampleData.denseMarkerLocations()
-        : ExampleData.markerLocations;
-    _markers
-      ..clear()
-      ..addAll(source.map((e) => _mk(e.id, e.point)));
-  }
-
-  void _setDenseMarkers(bool value) {
-    setState(() {
-      _denseMarkers = value;
-      _rebuildMarkers();
-    });
-  }
-
-  void _applyPanProfile(_PanProfile profile) {
-    setState(() {
-      switch (profile) {
-        case _PanProfile.mapOnly:
-          _showMarkersLayer = false;
-          _showMarkerLabels = false;
-          _showMarkerConnectors = false;
-          _showPolylineLayer = false;
-          _showOverlayLayer = false;
-        case _PanProfile.markersOnly:
-          _showMarkersLayer = true;
-          _showMarkerLabels = false;
-          _showMarkerConnectors = false;
-          _showPolylineLayer = false;
-          _showOverlayLayer = false;
-        case _PanProfile.labels:
-          _showMarkersLayer = true;
-          _showMarkerLabels = true;
-          _showMarkerConnectors = false;
-          _showPolylineLayer = false;
-          _showOverlayLayer = false;
-        case _PanProfile.full:
-          _showMarkersLayer = true;
-          _showMarkerLabels = true;
-          _showMarkerConnectors = true;
-          _showPolylineLayer = true;
-          _showOverlayLayer = true;
-      }
-    });
-  }
-
-  void _addAtCenter() {
-    if (!_inter.isEditing) _inter.startEditMode();
-    final c = _map.camera.center;
-    final id = 'M${DateTime.now().millisecondsSinceEpoch % 100000}';
-    _inter.add(_mk(id, c));
-  }
-
-  void _clearAll() {
-    final key = _inter.activeKey;
-    if (key != null) {
-      _inter.remove(key);
-      _inter.remove(key);
-      _inter.deselect();
-    }
-  }
-
-  void _addPolyline() {
-    if (!_interPolyline.isEditing) _interPolyline.startEditMode();
-    final c = _map.camera.center;
-    // Create a zigzag line around center
-    final points = [
-      LatLng(c.latitude - 0.005, c.longitude - 0.005),
-      LatLng(c.latitude + 0.005, c.longitude),
-      LatLng(c.latitude - 0.005, c.longitude + 0.005),
-    ];
-
-    final id = 'P${DateTime.now().millisecondsSinceEpoch % 100000}';
-    _interPolyline.add(InteractivePolyline(
-      key: ValueKey(id),
-      points: points,
-      color: Colors.blueAccent,
-      strokeWidth: 4.0,
-    ));
-  }
-
-  void _clearPolylines() {
-    final key = _interPolyline.activeKey;
-    if (key != null) {
-      _interPolyline.remove(key);
-      _interPolyline.remove(key);
-      _interPolyline.deselect();
-    }
-  }
-
-  void _addOverlay() {
-    if (!_interOverlay.isEditing) _interOverlay.startEditMode();
-    final c = _map.camera.center;
-    final id = 'O${DateTime.now().millisecondsSinceEpoch % 100000}';
-
-    // Create a square overlay around center
-    const delta = 0.005;
-    final tl = LatLng(c.latitude + delta, c.longitude - delta);
-    final tr = LatLng(c.latitude + delta, c.longitude + delta);
-    final br = LatLng(c.latitude - delta, c.longitude + delta);
-    final bl = LatLng(c.latitude - delta, c.longitude - delta);
-
-    _interOverlay.add(InteractiveOverlayImage(
+  InteractiveOverlayImage _overlay(String id, LatLng center) {
+    const d = 0.003;
+    return InteractiveOverlayImage(
       key: ValueKey(id),
       image: const AssetImage('assets/plan.png'),
+      alpha: (_opacity * 255).round(),
       corners: QuadLatLng(
-          topLeft: tl, topRight: tr, bottomRight: br, bottomLeft: bl),
-      alpha: 200,
-    ));
-  }
-
-  void _clearOverlays() {
-    final key = _interOverlay.activeKey;
-    if (key != null) {
-      _interOverlay.remove(key);
-      _interOverlay.remove(key);
-      _interOverlay.deselect();
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final gestures = InteractiveEnabledGestures(
-      tap: _gTap,
-      longPress: _gLong,
-      drag: _gDrag,
-    );
-
-    return Scaffold(
-      body: Stack(
-        children: [
-          FlutterMap(
-            mapController: _map,
-            options: const MapOptions(
-              initialCenter: LatLng(48.111, -1.680),
-              initialZoom: 14,
-            ),
-            children: [
-              TileLayer(
-                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                userAgentPackageName: 'example.enhanced_marker',
-              ),
-              if (_showOverlayLayer)
-                InteractiveOverlayLayer(
-                  overlayController: _interOverlay,
-                  overlays: [
-                    InteractiveOverlayImage(
-                      key: const ValueKey('image1'),
-                      image: const AssetImage('assets/plan.png'),
-                      corners: const QuadLatLng(
-                        topLeft: ExampleData.overlay1Tl,
-                        topRight: ExampleData.overlay1Tr,
-                        bottomRight: ExampleData.overlay1Br,
-                        bottomLeft: ExampleData.overlay1Bl,
-                      ),
-                      alpha: (_overlayAlpha * 255.0).toInt(),
-                    ),
-                    InteractiveOverlayImage(
-                      key: const ValueKey('image2'),
-                      image: const AssetImage('assets/plan.png'),
-                      corners: const QuadLatLng(
-                        topLeft: ExampleData.overlay2Tl,
-                        topRight: ExampleData.overlay2Tr,
-                        bottomRight: ExampleData.overlay2Br,
-                        bottomLeft: ExampleData.overlay2Bl,
-                      ),
-                      alpha: (_overlayAlpha * 255.0).toInt(),
-                    ),
-                  ],
-                ),
-              if (_showPolylineLayer)
-                InteractivePolylineLayer(
-                  polylines: _polylines,
-                  polylineController: _interPolyline,
-                  debug: _debugHitbox,
-                ),
-              if (_showMarkersLayer)
-                InteractiveMarkerLayer(
-                  markerController: _inter,
-                  markers: _markers,
-                  options: InteractiveOptions(
-                    saveOnExit: true,
-                    onSaved: (delta) {
-                      if (mounted && delta.hasChanged) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Saved !')),
-                        );
-                      }
-                    },
-                    enabledGestures: gestures,
-                    moveOnTap: _gMoveOnTap,
-                  ),
-                  markerOptions: InteractiveLayerOptions(
-                    activeBuilder: (context, controller, marker) {
-                      return Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.pink, width: 2),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.pink.withAlpha(50),
-                              blurRadius: 8,
-                              spreadRadius: 2,
-                            ),
-                          ],
-                        ),
-                        padding: const EdgeInsets.all(4),
-                        child:
-                            const Icon(Icons.location_on, color: Colors.pink),
-                      );
-                    },
-                  ),
-                  labelOptions: _showMarkerLabels
-                      ? LabelLayerOptions(
-                          collision: CollisionOptions(
-                            avoidCollisions: _collisionAvoidance,
-                            drawConnectors: _showMarkerConnectors,
-                          ),
-                        )
-                      : null,
-                  actionOptions: ActionLayerOptions(
-                      builder: (context, controller, marker) => _MarkerActions(
-                            onDelete: () {
-                              final key = _inter.activeKey;
-                              if (key != null) _inter.remove(key);
-                              _inter.deselect();
-                            },
-                          )),
-                  debug: _debugHitbox,
-                ),
-            ],
-          ),
-
-          // --- UI Overlays ---
-
-          // Top Left Title
-          Positioned(
-            top: 40,
-            left: 20,
-            child: Card(
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Row(
-                  children: [
-                    Icon(Icons.map_outlined,
-                        color: Theme.of(context).primaryColor),
-                    const SizedBox(width: 8),
-                    Text('Interactive Marker',
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium
-                            ?.copyWith(fontWeight: FontWeight.bold)),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          // Right Toolbar
-          Positioned(
-            top: 40,
-            right: 20,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Toolbox(
-                  markerController: _inter,
-                  polylineController: _interPolyline,
-                  overlayController: _interOverlay,
-                  onAddMarker: _addAtCenter,
-                  onAddPolyline: _addPolyline,
-                  onAddOverlay: _addOverlay,
-                  onClearMarkers: _clearAll,
-                  onClearPolylines: _clearPolylines,
-                  onClearOverlays: _clearOverlays,
-                ),
-                const SizedBox(height: 10),
-                FloatingActionButton.small(
-                  backgroundColor: Colors.white,
-                  child: Icon(
-                      _showSettings ? Icons.settings : Icons.settings_outlined,
-                      color: Colors.black87),
-                  onPressed: () =>
-                      setState(() => _showSettings = !_showSettings),
-                ),
-              ],
-            ),
-          ),
-
-          // Settings Panel
-          if (_showSettings)
-            Positioned(
-              top: 150,
-              right: 80,
-              child: LayerSettingsPanel(
-                title: 'Layer Settings',
-                onClose: () => setState(() => _showSettings = false),
-                child: Column(
-                  children: [
-                    ToggleSetting(
-                      label: 'Debug Hitboxes',
-                      value: _debugHitbox,
-                      onChanged: (v) => setState(() => _debugHitbox = v),
-                    ),
-                    ToggleSetting(
-                      label: 'Collision Avoidance',
-                      value: _collisionAvoidance,
-                      onChanged: (v) => setState(() => _collisionAvoidance = v),
-                    ),
-                    const SizedBox(height: 8),
-                    Text('Pan Profiling',
-                        style: Theme.of(context).textTheme.labelLarge),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        ActionChip(
-                          label: const Text('Map only'),
-                          onPressed: () =>
-                              _applyPanProfile(_PanProfile.mapOnly),
-                        ),
-                        ActionChip(
-                          label: const Text('Markers'),
-                          onPressed: () =>
-                              _applyPanProfile(_PanProfile.markersOnly),
-                        ),
-                        ActionChip(
-                          label: const Text('Labels'),
-                          onPressed: () => _applyPanProfile(_PanProfile.labels),
-                        ),
-                        ActionChip(
-                          label: const Text('Full'),
-                          onPressed: () => _applyPanProfile(_PanProfile.full),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    const Divider(),
-                    const SizedBox(height: 8),
-                    Text('Layer Visibility',
-                        style: Theme.of(context).textTheme.labelLarge),
-                    ToggleSetting(
-                      label: 'Markers Layer',
-                      value: _showMarkersLayer,
-                      onChanged: (v) => setState(() => _showMarkersLayer = v),
-                    ),
-                    ToggleSetting(
-                      label: 'Marker Labels',
-                      value: _showMarkerLabels,
-                      onChanged: (v) => setState(() => _showMarkerLabels = v),
-                    ),
-                    ToggleSetting(
-                      label: 'Label Connectors',
-                      value: _showMarkerConnectors,
-                      onChanged: (v) =>
-                          setState(() => _showMarkerConnectors = v),
-                    ),
-                    ToggleSetting(
-                      label: 'Polylines Layer',
-                      value: _showPolylineLayer,
-                      onChanged: (v) => setState(() => _showPolylineLayer = v),
-                    ),
-                    ToggleSetting(
-                      label: 'Overlays Layer',
-                      value: _showOverlayLayer,
-                      onChanged: (v) => setState(() => _showOverlayLayer = v),
-                    ),
-                    ToggleSetting(
-                      label: 'Dense Markers',
-                      value: _denseMarkers,
-                      onChanged: _setDenseMarkers,
-                    ),
-                    const SizedBox(height: 8),
-                    SliderSetting(
-                      label: 'Overlay Alpha',
-                      value: _overlayAlpha,
-                      min: 0.1,
-                      max: 1.0,
-                      onChanged: (v) => setState(() => _overlayAlpha = v),
-                    ),
-                    const SizedBox(height: 8),
-                    const Divider(),
-                    const SizedBox(height: 8),
-                    Text('Gestures',
-                        style: Theme.of(context).textTheme.labelLarge),
-                    ToggleSetting(
-                      label: 'Tap to Interact',
-                      value: _gTap,
-                      onChanged: (v) => setState(() => _gTap = v),
-                    ),
-                    ToggleSetting(
-                      label: 'Move on Tap',
-                      value: _gMoveOnTap,
-                      onChanged: (v) => setState(() => _gMoveOnTap = v),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-        ],
+        topLeft: LatLng(center.latitude + d, center.longitude - d),
+        topRight: LatLng(center.latitude + d, center.longitude + d),
+        bottomRight: LatLng(center.latitude - d, center.longitude + d),
+        bottomLeft: LatLng(center.latitude - d, center.longitude - d),
       ),
     );
   }
-}
 
-class _MarkerActions extends StatelessWidget {
-  final VoidCallback onDelete;
-  const _MarkerActions({required this.onDelete});
-  @override
-  Widget build(BuildContext context) {
-    return MarkerActionMenu(
-      actions: [
-        SimpleMarkerAction(
-          icon: const Icon(Icons.edit),
-          onPressed: (marker, {MarkerController? controller}) =>
-              ScaffoldMessenger.of(context)
-                  .showSnackBar(const SnackBar(content: Text('Edit action!'))),
-        ),
-        const TrashMarkerAction(),
-      ],
+  void _centerScene() {
+    _map.move(
+      _scene == DemoScene.polylines
+          ? const LatLng(48.124, -1.680)
+          : ExampleData.latLngStart,
+      _scene == DemoScene.markers && _dense ? 17 : 14,
     );
   }
+
+  void _chooseScene(DemoScene scene) {
+    setState(() => _scene = scene);
+    _centerScene();
+  }
+
+  void _add() {
+    _controller.startEditMode();
+    final center = _map.camera.center;
+    final id = 'new-${++_nextId}';
+    switch (_scene) {
+      case DemoScene.markers:
+        final item = _marker(id, center);
+        _markers.add(item);
+        _markers.select(item);
+      case DemoScene.polylines:
+        final item = InteractivePolyline(
+          key: ValueKey(id),
+          points: [
+            LatLng(center.latitude - .002, center.longitude - .003),
+            LatLng(center.latitude + .002, center.longitude),
+            LatLng(center.latitude - .002, center.longitude + .003),
+          ],
+          color: Colors.indigo,
+          strokeWidth: 5,
+        );
+        _polylines.add(item);
+        _polylines.select(item);
+      case DemoScene.overlays:
+        final item = _overlay(id, center);
+        _overlays.add(item);
+        _overlays.select(item);
+    }
+  }
+
+  void _reset() {
+    switch (_scene) {
+      case DemoScene.markers:
+        _markers.setMarkers(_markerData(dense: _dense), resetHistory: true);
+      case DemoScene.polylines:
+        _polylines.setPolylines(_initialPolylines, resetHistory: true);
+      case DemoScene.overlays:
+        _overlays.setOverlays(
+          [_overlay('floor-plan', ExampleData.latLngStart)],
+          resetHistory: true,
+        );
+    }
+    _controller.deselect();
+    _centerScene();
+    _activity.value = 'Scene reset. History cleared.';
+  }
+
+  void _setOpacity(double value) {
+    setState(() => _opacity = value);
+    for (final overlay in List<InteractiveOverlayImage>.of(_overlays.current)) {
+      _overlays.update(
+          overlay.key!, overlay.copyWith(alpha: (value * 255).round()),
+          merge: true);
+    }
+  }
+
+  Future<void> _open(String url) async {
+    if (!await launchUrl(Uri.parse(url), webOnlyWindowName: '_blank') &&
+        mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Open $url in your browser.')),
+      );
+    }
+  }
+
+  Widget _mapView() => FlutterMap(
+        key: _mapKey,
+        mapController: _map,
+        options: const MapOptions(
+          initialCenter: ExampleData.latLngStart,
+          initialZoom: 17,
+        ),
+        children: [
+          TileLayer(
+            tileProvider: widget.tileProvider,
+            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+            userAgentPackageName: 'dev.mki.flutter_map_interactive.example',
+          ),
+          // Keep all layer states mounted: scene changes must not reset history.
+          Offstage(
+            offstage: _scene != DemoScene.overlays,
+            child: InteractiveOverlayLayer(
+              overlays: _initialOverlays,
+              overlayController: _overlays,
+            ),
+          ),
+          Offstage(
+            offstage: _scene != DemoScene.polylines,
+            child: InteractivePolylineLayer(
+              polylines: _initialPolylines,
+              polylineController: _polylines,
+              debug: _debug,
+            ),
+          ),
+          Offstage(
+            offstage: _scene != DemoScene.markers,
+            child: InteractiveMarkerLayer(
+              markers: _initialMarkers,
+              markerController: _markers,
+              options: const InteractiveOptions(centerOnTap: false),
+              labelOptions: _labels
+                  ? LabelLayerOptions(
+                      strategy: _strategies.values.elementAt(_strategy),
+                      collision: CollisionOptions(
+                        maxRadius: 180,
+                        step: 12,
+                        pad: 3,
+                        avoidCollisions: _avoidCollisions,
+                        drawConnectors: _connectors,
+                      ),
+                    )
+                  : null,
+              popupOptions: const PopupLayerOptions(),
+              actionOptions: ActionLayerOptions(
+                builder: (context, controller, marker) =>
+                    const MarkerActionMenu(
+                  actions: [TrashMarkerAction()],
+                ),
+              ),
+              debug: _debug,
+            ),
+          ),
+          Align(
+            alignment: Alignment.bottomRight,
+            child: Material(
+              color: Theme.of(context).colorScheme.surface,
+              child: TextButton(
+                onPressed: () =>
+                    _open('https://www.openstreetmap.org/copyright'),
+                child: const Text('© OpenStreetMap contributors',
+                    style: TextStyle(fontSize: 11)),
+              ),
+            ),
+          ),
+        ],
+      );
+
+  Widget _controls() => !_ready
+      ? const SizedBox.shrink()
+      : ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            Text('Explore the package',
+                style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 12),
+            SegmentedButton<DemoScene>(
+              showSelectedIcon: false,
+              segments: const [
+                ButtonSegment(value: DemoScene.markers, label: Text('Pins')),
+                ButtonSegment(value: DemoScene.polylines, label: Text('Lines')),
+                ButtonSegment(value: DemoScene.overlays, label: Text('Images')),
+              ],
+              selected: {_scene},
+              onSelectionChanged: (value) => _chooseScene(value.first),
+            ),
+            const SizedBox(height: 16),
+            Text(
+                switch (_scene) {
+                  DemoScene.markers => 'Collision-aware labels',
+                  DemoScene.polylines => 'Edit a route',
+                  DemoScene.overlays => 'Position a floor plan',
+                },
+                style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            Text(switch (_scene) {
+              DemoScene.markers =>
+                'Compare collision strategies, pan and zoom. '
+                    'Tap a pin for its popup. Enable editing to drag it.',
+              DemoScene.polylines => 'Select the line and enable editing. Drag '
+                  'a vertex to reshape it, or drag the line to move it.',
+              DemoScene.overlays => 'Select the image and enable editing. Drag '
+                  'corners, edges and the rotation handle to align the plan.',
+            }),
+            const SizedBox(height: 16),
+            DemoControls(
+              controller: _controller,
+              onAdd: _add,
+              onReset: _reset,
+              onCenter: _centerScene,
+              onSaved: () => _activity.value = 'Checkpoint saved in memory.',
+            ),
+            const Divider(height: 32),
+            if (_scene == DemoScene.markers) ...[
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Avoid label collisions'),
+                value: _avoidCollisions,
+                onChanged: (value) => setState(() => _avoidCollisions = value),
+              ),
+              DropdownButtonFormField<int>(
+                initialValue: _strategy,
+                decoration:
+                    const InputDecoration(labelText: 'Placement strategy'),
+                items: [
+                  for (var i = 0; i < _strategies.length; i++)
+                    DropdownMenuItem(
+                        value: i, child: Text(_strategies.keys.elementAt(i))),
+                ],
+                onChanged: (value) => setState(() => _strategy = value!),
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Labels'),
+                value: _labels,
+                onChanged: (value) => setState(() => _labels = value),
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Connector lines'),
+                value: _connectors,
+                onChanged: (value) => setState(() => _connectors = value),
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Dense dataset (16 pins)'),
+                subtitle: const Text('Changing the dataset resets this scene.'),
+                value: _dense,
+                onChanged: (value) {
+                  setState(() => _dense = value);
+                  _reset();
+                },
+              ),
+            ],
+            if (_scene == DemoScene.overlays) ...[
+              Text('Image opacity: ${(_opacity * 100).round()}%'),
+              Slider(value: _opacity, min: .1, onChanged: _setOpacity),
+            ],
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Show hitboxes'),
+              value: _debug,
+              onChanged: (value) => setState(() => _debug = value),
+            ),
+            const Divider(height: 32),
+            Text('Latest interaction',
+                style: Theme.of(context).textTheme.labelLarge),
+            const SizedBox(height: 8),
+            ValueListenableBuilder(
+              valueListenable: _activity,
+              builder: (context, value, child) => Text(value),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+                'Changes live in this tab only. Save creates an in-memory '
+                'checkpoint; reloading the page starts a fresh demo.'),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              children: [
+                TextButton(
+                    onPressed: () => _open(
+                        'https://pub.dev/packages/flutter_map_interactive'),
+                    child: const Text('pub.dev')),
+                TextButton(
+                    onPressed: () => _open(
+                        'https://github.com/mkidv/flutter_map_interactive'),
+                    child: const Text('Source on GitHub')),
+              ],
+            ),
+          ],
+        );
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(
+          title: const Text('flutter_map_interactive'),
+          actions: [
+            IconButton(
+              tooltip: 'Reset current scene',
+              onPressed: _reset,
+              icon: const Icon(Icons.restart_alt),
+            ),
+          ],
+        ),
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            if (constraints.maxWidth >= 800) {
+              return Row(children: [
+                Expanded(child: _mapView()),
+                const VerticalDivider(width: 1),
+                SizedBox(width: 340, child: _controls()),
+              ]);
+            }
+            return Column(children: [
+              Expanded(child: _mapView()),
+              const Divider(height: 1),
+              SizedBox(
+                height: (constraints.maxHeight * .44).clamp(0.0, 340.0),
+                child: _controls(),
+              ),
+            ]);
+          },
+        ),
+      );
 }

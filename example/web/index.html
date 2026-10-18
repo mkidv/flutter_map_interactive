@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <!--
     If you are serving your web app in a path other than the root, change the
@@ -18,21 +18,46 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="description" content="Try interactive map editing: collision-free marker labels, editable routes, image overlays, and undo/redo with flutter_map_interactive.">
+  <meta name="theme-color" content="#6366F1">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="flutter_map_interactive_example">
+  <meta name="apple-mobile-web-app-title" content="Interactive Map Demo">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
-  <link rel="icon" type="image/png" href="favicon.png"/>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
 
-  <title>flutter_map_enhanced_marker_example</title>
+  <title>flutter_map_interactive — Live Demo</title>
   <link rel="manifest" href="manifest.json">
+  <style>
+    body { margin: 0; }
+    #loading { position: fixed; inset: 0; display: grid; place-content: center;
+      padding: 24px; background: #f8fafc; color: #1e293b;
+      font: 16px/1.6 system-ui, sans-serif; text-align: center; z-index: 1; }
+    #loading h1 { font-size: clamp(20px, 5vw, 30px); margin: 0; }
+    #loading a { color: #4f46e5; }
+    @media (prefers-color-scheme: dark) {
+      #loading { background: #0f172a; color: #f1f5f9; }
+      #loading a { color: #a5b4fc; }
+    }
+  </style>
 </head>
 <body>
+  <div id="loading" role="status" aria-live="polite">
+    <h1>flutter_map_interactive</h1>
+    <p>Collision-aware labels. Editable routes. Image overlays.</p>
+    <p>Loading the interactive playground…</p>
+    <a href="https://pub.dev/packages/flutter_map_interactive">Read the package documentation</a>
+  </div>
+  <noscript>This interactive Flutter map demo requires JavaScript. See https://pub.dev/packages/flutter_map_interactive for documentation.</noscript>
+  <script>
+    window.addEventListener('flutter-first-frame', function () {
+      document.getElementById('loading')?.remove();
+    });
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

@@ -1,12 +1,12 @@
 {
-    "name": "flutter_map_enhanced_marker_example",
-    "short_name": "flutter_map_enhanced_marker_example",
+    "name": "flutter_map_interactive Demo",
+    "short_name": "Map Demo",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
-    "orientation": "portrait-primary",
+    "background_color": "#F8FAFC",
+    "theme_color": "#6366F1",
+    "description": "Explore collision-free labels, route editing, image overlays, and undo/redo.",
+    "orientation": "any",
     "prefer_related_applications": false,
     "icons": [
         {

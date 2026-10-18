@@ -25,7 +25,7 @@ class ExampleData {
         (id: 'D', point: const LatLng(48.101, -1.680)),
         (id: 'E', point: const LatLng(48.103, -1.683)),
         (id: 'F', point: const LatLng(48.105, -1.676)),
-        (id: 'Outside', point: const LatLng(48.105, -1.618)),
+        (id: 'G', point: const LatLng(48.108, -1.674)),
       ];
 
   static List<({String id, LatLng point})> denseMarkerLocations({

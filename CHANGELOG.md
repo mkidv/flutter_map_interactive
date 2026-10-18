@@ -1,3 +1,11 @@
+## Unreleased
+
+* Rebuild the interactive example around marker, polyline, and image overlay scenes with adaptive desktop and mobile controls.
+* Preserve scene edits and history across scene switches, settings changes, and layout changes.
+* Add collision strategy comparison, marker popups, checkpoint/discard controls, reset, and interaction feedback.
+* Add regression tests for the demo and an automated GitHub Pages deployment workflow.
+* Link the browser demo from the README and document local development and deployment.
+
 ## 0.1.1
 
 * Update `latlong2` to `^0.10.1` and `meta` to `^1.19.0`.
