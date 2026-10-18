@@ -22,7 +22,7 @@ Interactive editing, collision avoidance, and state management for [flutter_map]
 Composable interaction layers for flutter_map: **Markers, Polylines, Image Overlays, Undo/Redo, and Collision Detection**.
 
 <p align="center">
-  <b>Tested</b> · <code>226/226 tests passing</code> · <code>flutter_map ^8.3.2</code>
+  <b>Tested</b> · <code>255/255 tests passing</code> · <code>flutter_map ^8.3.2</code>
 </p>
 
 ## ✨ Features
@@ -47,8 +47,8 @@ Or add to your `pubspec.yaml`:
 ```yaml
 dependencies:
   flutter_map: ^8.3.2
-  flutter_map_interactive: ^0.1.0
-  latlong2: ^0.9.1
+  flutter_map_interactive: ^0.1.1
+  latlong2: ^0.10.1
 ```
 
 ## 🧭 API & Architecture
